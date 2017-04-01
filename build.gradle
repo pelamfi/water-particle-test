@@ -1,0 +1,46 @@
+plugins {
+    id 'cpp'
+}
+
+model {
+    buildTypes {
+        debug
+        release
+    }
+
+    platforms {
+        x64 {
+            architecture "x86_64"
+        }
+    }
+
+    components {
+        main(NativeExecutableSpec) {
+            sources {
+                cpp {
+                    source {
+                        srcDir "cpp"
+                        include "**/*.cpp"
+                    }
+                }
+            }
+        }
+    }
+
+    binaries {
+        all {
+    	    // --emit-llvm apparently makes .o files be bitcode files, otherwise everything seems to work the same.
+            // Although the FPS seems to be better. I wonder if that is some kind of fluke or whether
+	        // having object file be bitcode allows some optimization or something.
+            // '-emit-llvm', 
+            cppCompiler.args '-I', "$projectDir/../../external/sdl/include"
+	    
+	        // cppCompiler.args '-I', "$projectDir/../../external/sdl/include"
+	        linker.args "-L", "$projectDir/../../external/sdl/lib", '-lSDL2'
+
+            if (toolChain in Clang && buildType == buildTypes.debug) {
+                cppCompiler.args "-g"
+            }
+        }
+    }
+}
