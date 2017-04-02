@@ -183,8 +183,8 @@ static void updateSimulation() {
         subParticleDensity(dp);
 
         p->yVel += particleGravity;
-        updateParticleDim(p->x, p->xVel, *(dp + 1), *(dp + 1 + densityBufferWidth * 2));
-        updateParticleDim(p->y, p->yVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 2));
+        updateParticleDim(p->x, p->xVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 2));
+        updateParticleDim(p->y, p->yVel, *(dp + 1), *(dp + 1 + densityBufferWidth * 2));
         p->x &= particlePosXMask;
         p->y &= particlePosYMask;
         addParticleDensity(densityKernelTopLeftAddr(p->x, p->y));
