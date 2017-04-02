@@ -1,45 +1,54 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
 
-#include "SDL2/SDL.h" // include SDL header
+#include "SDL2/SDL.h"
 #include "stdint.h"
 #include "stdlib.h"
 
 #pragma clang diagnostic pop
 
-//using namespace std;
-
 struct particle
 {
-    uint16_t x; // 4 fractional bits
-    uint16_t y; // 4 fractional bits
-    uint16_t xVel; // 8 fractional bits
-    uint16_t yVel; // 8 fractional bits
+    uint16_t x; // particleCoordFBits fractional bits
+    uint16_t y; 
+    int16_t xVel; // particleVelFBits fractional bits
+    int16_t yVel;
 };
 
 typedef uint8_t DensityBufferType;
 
-
+static int const particleCalculationFBits = 16; // calculations done at this precision
+static int const particlePosFBits = 4; // particle coordinate fractional bits
+static int const particleVelFBits = 8; // particle velocity fractional bits
 static int const screenWidth = 640;
 static int const screenHeight = 480;
-static int const densityBufferWidth = screenWidth;
-static int const densityBufferHeight = screenHeight;
+static int const densityBufferWidthExp2 = 10;
+static int const densityBufferWidth = 1 << densityBufferWidthExp2;
+static int const particlePosXMask = (1 << (densityBufferWidthExp2 + particlePosFBits)) - 1;
+static int const densityBufferHeightExp2 = 9;
+static int const densityBufferHeight = 1 << densityBufferHeightExp2;
+static int const particlePosYMask = (1 << (densityBufferHeightExp2 + particlePosFBits)) - 1;
 static int const particleCount = 10000;
 static int const particleBufferSize = particleCount * sizeof(particle);
-static int const densityBufferSize = densityBufferWidth * densityBufferHeight * sizeof(DensityBufferType);
+static int const densityBufferYMargins = 8; // kernel is 3 so this should be plenty
+static int const densityBufferSize = densityBufferWidth * (densityBufferHeight + densityBufferYMargins) * sizeof(DensityBufferType);
+
 static DensityBufferType* densityBuffer = 0;
 static particle* particleBuffer = 0;
+
 static SDL_Event event;
 static SDL_Window* window = 0;
 static SDL_Surface* screen = 0;
 static bool exitRequested = false;
-static int bpp = 0;
-static int frameCounter = 0;
 
+static int bpp = 0;
+
+static int frameCounter = 0;
 
 static void allocateBuffers() {
     densityBuffer = (DensityBufferType*)malloc(densityBufferSize);
     memset(densityBuffer, 0, densityBufferSize);
+    densityBuffer += densityBufferYMargins / 2; // margin to reduce need for explicit bounds checking
 
     particleBuffer = (particle*)malloc(particleBufferSize);
     memset(particleBuffer, 0, particleBufferSize);
@@ -59,10 +68,47 @@ static void densityBlock(int x, int y, int w, int h, DensityBufferType const& v)
 
 static void drawInitialDensityMap() {
     DensityBufferType const densityHard = 250;
-    densityBlock(0, densityBufferHeight - 10, densityBufferWidth, 10, densityHard); // bottom
-    densityBlock(0, 0, 10, densityBufferHeight, densityHard); // left
-    densityBlock(densityBufferWidth - 10, 0, 10, densityBufferHeight, densityHard); // right
-    densityBlock(densityBufferWidth / 2 - 30, densityBufferHeight - 70, 60, 60, densityHard); // center
+    densityBlock(0, screenHeight - 10, screenWidth, 10, densityHard); // bottom
+    densityBlock(0, 0, 10, screenHeight, densityHard); // left
+    densityBlock(screenWidth - 10, 0, 10, screenHeight, densityHard); // right
+    densityBlock(screenWidth / 2 - 30, screenHeight - 70, 60, 60, densityHard); // center
+}
+
+static void addParticleDensity(int x, int y) {
+    // http://dev.theomader.com/gaussian-kernel-calculator/
+    // sigma 0.5 size 3
+    /* (0.024879,	0.107973,	0.024879,
+        0.107973,	0.468592,	0.107973,
+        0.024879,	0.107973,	0.024879)
+
+        scala> List(0.024879, 0.107973, 0.024879, 0.107973, 0.468592, 0.107973, 0.024879, 0.107973, 0.024879)
+        .map(_ * 64).map(Math.round)
+
+        List(2, 7, 2, 7, 30, 7, 2, 7, 2)
+        */
+    DensityBufferType *p = densityAddr((x >> particlePosFBits) - 1, (y >> particlePosFBits) - 1);
+    int const skip = densityBufferWidth - 2;
+    *(p++) += 2; *(p++) += 7; *p += 2; p+=skip;
+    *(p++) += 7; *(p++) += 30; *p += 7; p+=skip;
+    *(p++) += 2; *(p++) += 7; *p += 2;
+}
+
+static void subParticleDensity(int x, int y) {
+    DensityBufferType *p = densityAddr((x >> particlePosFBits) - 1, (y >> particlePosFBits) - 1);
+    int const skip = densityBufferWidth - 2;
+    *(p++) -= 2; *(p++) -= 7; *p -= 2; p+=skip;
+    *(p++) -= 7; *(p++) -= 30; *p -= 7; p+=skip;
+    *(p++) -= 2; *(p++) -= 7; *p -= 2;
+}
+
+static void setupInitialParticles() {
+    for(int i = 0; i < particleCount; i++) {
+        particleBuffer[i].x = rand() % ((screenWidth - 20) << particlePosFBits) + (10 << particlePosFBits);
+        particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits) + ((screenHeight / 4 * 2 + 10) << particlePosFBits);
+        particleBuffer[i].xVel = (rand() % (2 << particleVelFBits)) - (1 << particleVelFBits);
+        particleBuffer[i].yVel = (rand() % (2 << particleVelFBits)) - (1 << particleVelFBits);
+        addParticleDensity(particleBuffer[i].x, particleBuffer[i].y);
+    }
 }
 
 static void sdlInit() {
@@ -108,14 +154,34 @@ static void renderFrameOld() {
     }
 }
 
+static void updateParticleDim(uint16_t& posVar, int16_t& velVar) {
+    int pos = posVar << (particleCalculationFBits - particlePosFBits);
+    int vel = velVar << (particleCalculationFBits - particleVelFBits);
+    int result = pos + vel;
+    posVar = result >> (particleCalculationFBits - particlePosFBits);
+}
+
+static void updateSimulation() {
+    for (int particleIndex = 0; particleIndex < particleCount; particleIndex++) {
+        particle* p = &particleBuffer[particleIndex];
+        subParticleDensity(p->x, p->y);
+        updateParticleDim(p->x, p->xVel);
+        updateParticleDim(p->y, p->yVel);
+        p->x &= particlePosXMask;
+        p->y &= particlePosYMask;
+        addParticleDensity(p->x, p->y);
+    }
+}
+
+
 static void renderFrame() {
     for (int y = 0; y < screenHeight; y++)
     {
         for (int x = 0; x < screenWidth; x++)
         {
-            *pixelAddr(x, y, 0) = (uint8_t)0;
-            *pixelAddr(x, y, 1) = (uint8_t)0;
-            *pixelAddr(x, y, 2) = *densityAddr(x, y);
+            *pixelAddr(x, y, 0) = *densityAddr(x, y);
+            *pixelAddr(x, y, 1) = *densityAddr(x, y) * 2 & 0xff;
+            *pixelAddr(x, y, 2) = *densityAddr(x, y) * 4 & 0xff;
         }
     }
 }
@@ -125,6 +191,7 @@ static void renderLoop() {
     {
         if (SDL_MUSTLOCK(screen)) SDL_LockSurface(screen);
 
+        updateSimulation();
         renderFrame();
         
         if (SDL_MUSTLOCK(screen)) SDL_UnlockSurface(screen);
@@ -141,6 +208,7 @@ int main(int argc, char* argv[])
 {
     allocateBuffers();
     drawInitialDensityMap();
+    setupInitialParticles();
     sdlInit();
 
     renderLoop();
