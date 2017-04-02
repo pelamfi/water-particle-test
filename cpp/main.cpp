@@ -199,9 +199,9 @@ static void renderFrame() {
     {
         for (int x = 0; x < screenWidth; x++)
         {
-            *pixelAddr(x, y, 0) = *densityAddr(x, y);
+            *pixelAddr(x, y, 2) = *densityAddr(x, y);
             *pixelAddr(x, y, 1) = *densityAddr(x, y) * 2 & 0xff;
-            *pixelAddr(x, y, 2) = *densityAddr(x, y) * 4 & 0xff;
+            *pixelAddr(x, y, 0) = *densityAddr(x, y) * 4 & 0xff;
         }
     }
 }
