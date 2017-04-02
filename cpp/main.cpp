@@ -20,8 +20,9 @@ typedef uint8_t DensityBufferType;
 static int const particleCalculationFBits = 16; // calculations done at this precision
 static int const particlePosFBits = 4; // particle coordinate fractional bits
 static int const particleVelFBits = 8; // particle velocity fractional bits
+static int const particleVelRounding = 1 << (particleVelFBits - 1); // https://sestevenson.wordpress.com/2009/08/19/rounding-in-fixed-point-number-conversions/
 static int const particleGravity = 4; // particleVelFBits fractional bits included
-static int const particleFriction = 251; // particleCalculationFBits fractional bits included
+static int const particleFriction = 255; // particleVelFBits fractional bits included
 
 static int const screenWidth = 640;
 static int const screenHeight = 480;
@@ -108,8 +109,9 @@ static void setupInitialParticles() {
     for(int i = 0; i < particleCount; i++) {
         particleBuffer[i].x = rand() % ((screenWidth - 20) << particlePosFBits) + (10 << particlePosFBits);
         particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits) + ((screenHeight / 4 * 2 + 10) << particlePosFBits);
-        particleBuffer[i].xVel = (rand() % (2 << particleVelFBits)) - (1 << particleVelFBits);
-        particleBuffer[i].yVel = (rand() % (2 << particleVelFBits)) - (1 << particleVelFBits);
+        int const velRange = 1 << particleVelFBits;
+        particleBuffer[i].xVel = (rand() % velRange) - (velRange / 2);
+        particleBuffer[i].yVel = (rand() % velRange) - (velRange / 2);
         addParticleDensity(particleBuffer[i].x, particleBuffer[i].y);
     }
 }
@@ -161,11 +163,10 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar) {
     int pos = posVar << (particleCalculationFBits - particlePosFBits);
     int vel = velVar << (particleCalculationFBits - particleVelFBits);
     int resultPos = pos + vel;
-    resultPos *= particleFriction;
-    resultPos >>= particleVelFBits;    
     posVar = resultPos >> (particleCalculationFBits - particlePosFBits);
 
     int resultVel = velVar * particleFriction;
+    resultVel += particleVelRounding;
     resultVel >>= particleVelFBits;
     velVar = resultVel;
 }
