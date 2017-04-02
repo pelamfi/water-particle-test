@@ -15,7 +15,7 @@ struct particle
     int16_t yVel;
 };
 
-typedef uint8_t DensityBufferType;
+typedef uint16_t DensityBufferType;
 
 static int const particleCalculationFBits = 16; // calculations done at this precision
 static int const particlePosFBits = 4; // particle coordinate fractional bits
