@@ -50,8 +50,8 @@ static DensityBufferType* densityAddr(int x, int y) {
 }
 
 static void densityBlock(int x, int y, int w, int h, DensityBufferType const& v) {
-    for(int xp = x; xp < x + w; xp++) {
-        for(int yp = y; yp < y + h; yp++) {
+    for(int yp = y; yp < y + h; yp++) {
+        for(int xp = x; xp < x + w; xp++) {
             *densityAddr(xp, yp) = v;
         }
     }
@@ -61,8 +61,8 @@ static void drawInitialDensityMap() {
     DensityBufferType const densityHard = 250;
     densityBlock(0, densityBufferHeight - 10, densityBufferWidth, 10, densityHard); // bottom
     densityBlock(0, 0, 10, densityBufferHeight, densityHard); // left
-    densityBlock(densityBufferWidth - 10, 0, densityBufferHeight, 10, densityHard); // right
-    densityBlock(densityBufferWidth / 2 - 10, densityBufferHeight - 30, 20, 20, densityHard); // center
+    densityBlock(densityBufferWidth - 10, 0, 10, densityBufferHeight, densityHard); // right
+    densityBlock(densityBufferWidth / 2 - 30, densityBufferHeight - 70, 60, 60, densityHard); // center
 }
 
 static void sdlInit() {
@@ -95,7 +95,7 @@ static uint8_t* pixelAddr(int x, int y, int channel) {
     return p;
 }
 
-static void renderFrame() {
+static void renderFrameOld() {
     for (int x = 0; x < screenWidth; x++)
     {
         for (int y = 0; y < screenHeight; y++)
@@ -104,6 +104,18 @@ static void renderFrame() {
             {
                 *pixelAddr(x, y, c) = (((frameCounter * c) + x) * (y + (frameCounter * (c ^ 2)))) & 0xff;
             }
+        }
+    }
+}
+
+static void renderFrame() {
+    for (int y = 0; y < screenHeight; y++)
+    {
+        for (int x = 0; x < screenWidth; x++)
+        {
+            *pixelAddr(x, y, 0) = (uint8_t)0;
+            *pixelAddr(x, y, 1) = (uint8_t)0;
+            *pixelAddr(x, y, 2) = *densityAddr(x, y);
         }
     }
 }
