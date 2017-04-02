@@ -20,6 +20,8 @@ typedef uint8_t DensityBufferType;
 static int const particleCalculationFBits = 16; // calculations done at this precision
 static int const particlePosFBits = 4; // particle coordinate fractional bits
 static int const particleVelFBits = 8; // particle velocity fractional bits
+static int const particleGravity = 4; // fractional bits included
+static int const particleFriction = 251; // fractional bits included
 static int const screenWidth = 640;
 static int const screenHeight = 480;
 static int const densityBufferWidthExp2 = 10;
@@ -158,6 +160,8 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar) {
     int pos = posVar << (particleCalculationFBits - particlePosFBits);
     int vel = velVar << (particleCalculationFBits - particleVelFBits);
     int result = pos + vel;
+    result *= particleFriction;
+    result >>= particleVelFBits;
     posVar = result >> (particleCalculationFBits - particlePosFBits);
 }
 
@@ -165,6 +169,7 @@ static void updateSimulation() {
     for (int particleIndex = 0; particleIndex < particleCount; particleIndex++) {
         particle* p = &particleBuffer[particleIndex];
         subParticleDensity(p->x, p->y);
+        p->yVel += particleGravity;
         updateParticleDim(p->x, p->xVel);
         updateParticleDim(p->y, p->yVel);
         p->x &= particlePosXMask;
