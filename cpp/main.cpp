@@ -171,7 +171,7 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferTy
     int resultVel = velVar * particleFriction;
     resultVel += particleVelRounding;
     resultVel >>= particleVelFBits;
-    resultVel += (s1 - s2) >> gradientShift;
+    resultVel += ( (s1 - s2) + (1 << (gradientShift - 1)) ) >> gradientShift;
     velVar = resultVel;
 }
 
