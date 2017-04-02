@@ -21,8 +21,9 @@ static int const particleCalculationFBits = 16; // calculations done at this pre
 static int const particlePosFBits = 4; // particle coordinate fractional bits
 static int const particleVelFBits = 8; // particle velocity fractional bits
 static int const particleVelRounding = 1 << (particleVelFBits - 1); // https://sestevenson.wordpress.com/2009/08/19/rounding-in-fixed-point-number-conversions/
-static int const particleGravity = 4; // particleVelFBits fractional bits included
-static int const particleFriction = 255; // particleVelFBits fractional bits included
+static int const particleGravity = 2; // particleVelFBits fractional bits included
+static int const particleFriction = 249; // particleVelFBits fractional bits included
+static int const gradientShift = 3;
 
 static int const screenWidth = 640;
 static int const screenHeight = 480;
@@ -78,7 +79,8 @@ static void drawInitialDensityMap() {
     densityBlock(screenWidth / 2 - 30, screenHeight - 70, 60, 60, densityHard); // center
 }
 
-static void addParticleDensity(int x, int y) {
+// Parameter is pointer to the top left corner of the 3x3 density kernel
+static void addParticleDensity(DensityBufferType *p) {
     // http://dev.theomader.com/gaussian-kernel-calculator/
     // sigma 0.5 size 3
     /* (0.024879,	0.107973,	0.024879,
@@ -90,19 +92,20 @@ static void addParticleDensity(int x, int y) {
 
         List(2, 7, 2, 7, 30, 7, 2, 7, 2)
         */
-    DensityBufferType *p = densityAddr((x >> particlePosFBits) - 1, (y >> particlePosFBits) - 1);
-    int const skip = densityBufferWidth - 2;
-    *(p++) += 2; *(p++) += 7; *p += 2; p+=skip;
-    *(p++) += 7; *(p++) += 30; *p += 7; p+=skip;
+    *(p++) += 2; *(p++) += 7; *p += 2; p += densityBufferWidth - 2;
+    *(p++) += 7; *(p++) += 30; *p += 7; p += densityBufferWidth - 2;
     *(p++) += 2; *(p++) += 7; *p += 2;
 }
 
-static void subParticleDensity(int x, int y) {
-    DensityBufferType *p = densityAddr((x >> particlePosFBits) - 1, (y >> particlePosFBits) - 1);
-    int const skip = densityBufferWidth - 2;
-    *(p++) -= 2; *(p++) -= 7; *p -= 2; p+=skip;
-    *(p++) -= 7; *(p++) -= 30; *p -= 7; p+=skip;
+static void subParticleDensity(DensityBufferType *p) {
+    *(p++) -= 2; *(p++) -= 7; *p -= 2; p += densityBufferWidth - 2;
+    *(p++) -= 7; *(p++) -= 30; *p -= 7; p += densityBufferWidth - 2;
     *(p++) -= 2; *(p++) -= 7; *p -= 2;
+}
+
+static DensityBufferType * densityKernelTopLeftAddr(int x, int y) {
+    DensityBufferType *p = densityAddr((x >> particlePosFBits) - 1, (y >> particlePosFBits) - 1);
+    return p;
 }
 
 static void setupInitialParticles() {
@@ -112,7 +115,7 @@ static void setupInitialParticles() {
         int const velRange = 1 << particleVelFBits;
         particleBuffer[i].xVel = (rand() % velRange) - (velRange / 2);
         particleBuffer[i].yVel = (rand() % velRange) - (velRange / 2);
-        addParticleDensity(particleBuffer[i].x, particleBuffer[i].y);
+        addParticleDensity(densityKernelTopLeftAddr(particleBuffer[i].x, particleBuffer[i].y));
     }
 }
 
@@ -159,7 +162,7 @@ static void renderFrameOld() {
     }
 }
 
-static void updateParticleDim(uint16_t& posVar, int16_t& velVar) {
+static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2) {
     int pos = posVar << (particleCalculationFBits - particlePosFBits);
     int vel = velVar << (particleCalculationFBits - particleVelFBits);
     int resultPos = pos + vel;
@@ -168,19 +171,23 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar) {
     int resultVel = velVar * particleFriction;
     resultVel += particleVelRounding;
     resultVel >>= particleVelFBits;
+    resultVel += (s1 - s2) >> gradientShift;
     velVar = resultVel;
 }
 
 static void updateSimulation() {
     for (int particleIndex = 0; particleIndex < particleCount; particleIndex++) {
         particle* p = &particleBuffer[particleIndex];
-        subParticleDensity(p->x, p->y);
+
+        DensityBufferType *dp = densityKernelTopLeftAddr(p->x, p->y);
+        subParticleDensity(dp);
+
         p->yVel += particleGravity;
-        updateParticleDim(p->x, p->xVel);
-        updateParticleDim(p->y, p->yVel);
+        updateParticleDim(p->x, p->xVel, *(dp + 1), *(dp + 1 + densityBufferWidth * 2));
+        updateParticleDim(p->y, p->yVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 2));
         p->x &= particlePosXMask;
         p->y &= particlePosYMask;
-        addParticleDensity(p->x, p->y);
+        addParticleDensity(densityKernelTopLeftAddr(p->x, p->y));
     }
 }
 
