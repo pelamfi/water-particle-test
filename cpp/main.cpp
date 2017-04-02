@@ -21,6 +21,7 @@ static int const particleCalculationFBits = 16; // calculations done at this pre
 static int const particlePosFBits = 4; // particle coordinate fractional bits
 static int const particleVelFBits = 8; // particle velocity fractional bits
 static int const particleVelRounding = 1 << (particleVelFBits - 1); // https://sestevenson.wordpress.com/2009/08/19/rounding-in-fixed-point-number-conversions/
+static int const particlePosRounding = 1 << (particlePosFBits - 1);
 static int const particleGravity = 2; // particleVelFBits fractional bits included
 static int const particleFriction = 249; // particleVelFBits fractional bits included
 static int const gradientShift = 3;
@@ -104,7 +105,7 @@ static void subParticleDensity(DensityBufferType *p) {
 }
 
 static DensityBufferType * densityKernelTopLeftAddr(int x, int y) {
-    DensityBufferType *p = densityAddr((x >> particlePosFBits) - 1, (y >> particlePosFBits) - 1);
+    DensityBufferType *p = densityAddr(((x + particlePosRounding) >> particlePosFBits) - 1, ((y  + particlePosRounding) >> particlePosFBits) - 1);
     return p;
 }
 
@@ -112,7 +113,7 @@ static void setupInitialParticles() {
     for(int i = 0; i < particleCount; i++) {
         particleBuffer[i].x = rand() % ((screenWidth - 20) << particlePosFBits) + (10 << particlePosFBits);
         particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits) + ((screenHeight / 4 * 2 + 10) << particlePosFBits);
-        int const velRange = 1 << particleVelFBits;
+        int const velRange = 1 << particleVelFBits + 1;
         particleBuffer[i].xVel = (rand() % velRange) - (velRange / 2);
         particleBuffer[i].yVel = (rand() % velRange) - (velRange / 2);
         addParticleDensity(densityKernelTopLeftAddr(particleBuffer[i].x, particleBuffer[i].y));
@@ -166,7 +167,8 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferTy
     int pos = posVar << (particleCalculationFBits - particlePosFBits);
     int vel = velVar << (particleCalculationFBits - particleVelFBits);
     int resultPos = pos + vel;
-    posVar = resultPos >> (particleCalculationFBits - particlePosFBits);
+    int rounding = 1 << (particleCalculationFBits - particlePosFBits - 1);
+    posVar = (resultPos + rounding) >> (particleCalculationFBits - particlePosFBits);
 
     int resultVel = velVar * particleFriction;
     resultVel += particleVelRounding;
