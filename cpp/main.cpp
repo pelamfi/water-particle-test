@@ -90,6 +90,11 @@ static void sdlHandleEvents() {
     }
 }
 
+static uint8_t* pixelAddr(int x, int y, int channel) {
+    uint8_t* p = (uint8_t*)screen->pixels + y * screen->pitch + x * bpp + channel;
+    return p;
+}
+
 static void renderFrame() {
     for (int x = 0; x < screenWidth; x++)
     {
@@ -97,8 +102,7 @@ static void renderFrame() {
         {
             for (int c = 0; c < bpp; c++)
             {
-                Uint8* p = (Uint8*)screen->pixels + y * screen->pitch + x * bpp + c;
-                *p = (((frameCounter * c) + x) * (y + (frameCounter * (c ^ 2)))) & 0xff;
+                *pixelAddr(x, y, c) = (((frameCounter * c) + x) * (y + (frameCounter * (c ^ 2)))) & 0xff;
             }
         }
     }
