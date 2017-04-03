@@ -24,7 +24,7 @@ static int const particleVelRounding = 1 << (particleVelFBits - 1); // https://s
 static int const particlePosRounding = 1 << (particlePosFBits - 1);
 static int const particleGravity = 2; // particleVelFBits fractional bits included
 static int const particleFriction = 249; // particleVelFBits fractional bits included
-static int const gradientShift = 5; // shift right, because the density difference is added to a variable with particleCalculationFBits fractional bits
+static int const gradientShift = 4; // shift right, because the density difference is added to a variable with particleCalculationFBits fractional bits
 
 static int const screenWidth = 640;
 static int const screenHeight = 480;
@@ -34,7 +34,7 @@ static int const particlePosXMask = (1 << (densityBufferWidthExp2 + particlePosF
 static int const densityBufferHeightExp2 = 9;
 static int const densityBufferHeight = 1 << densityBufferHeightExp2;
 static int const particlePosYMask = (1 << (densityBufferHeightExp2 + particlePosFBits)) - 1;
-static int const particleCount = 10000;
+static int const particleCount = 30000;
 static int const particleBufferSize = particleCount * sizeof(particle);
 static int const densityBufferYMargins = 8; // kernel is 3 so this should be plenty
 static int const densityBufferSize = densityBufferWidth * (densityBufferHeight + densityBufferYMargins) * sizeof(DensityBufferType);
@@ -73,7 +73,7 @@ static void densityBlock(int x, int y, int w, int h, DensityBufferType const& v)
 }
 
 static void drawInitialDensityMap() {
-    DensityBufferType const densityHard = 250;
+    DensityBufferType const densityHard = 500;
     densityBlock(0, screenHeight - 10, screenWidth, 10, densityHard); // bottom
     densityBlock(0, 0, 10, screenHeight, densityHard); // left
     densityBlock(screenWidth - 10, 0, 10, screenHeight, densityHard); // right
@@ -199,9 +199,10 @@ static void renderFrame() {
     {
         for (int x = 0; x < screenWidth; x++)
         {
-            *pixelAddr(x, y, 2) = *densityAddr(x, y);
-            *pixelAddr(x, y, 1) = *densityAddr(x, y) * 2 & 0xff;
-            *pixelAddr(x, y, 0) = *densityAddr(x, y) * 4 & 0xff;
+            DensityBufferType density = *densityAddr(x, y);
+            *pixelAddr(x, y, 0) = (density << 4) & 0xff;
+            *pixelAddr(x, y, 1) = (density >> 2) & 0xff;
+            *pixelAddr(x, y, 2) = (density >> 8) & 0xff;
         }
     }
 }
