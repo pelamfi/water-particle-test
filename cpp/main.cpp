@@ -24,7 +24,7 @@ static int const particleVelRounding = 1 << (particleVelFBits - 1); // https://s
 static int const particlePosRounding = 1 << (particlePosFBits - 1);
 static int const particleGravity = 2; // particleVelFBits fractional bits included
 static int const particleFriction = 249; // particleVelFBits fractional bits included
-static int const gradientShift = 3;
+static int const gradientShift = 5; // shift right, because the density difference is added to a variable with particleCalculationFBits fractional bits
 
 static int const screenWidth = 640;
 static int const screenHeight = 480;
@@ -77,7 +77,7 @@ static void drawInitialDensityMap() {
     densityBlock(0, screenHeight - 10, screenWidth, 10, densityHard); // bottom
     densityBlock(0, 0, 10, screenHeight, densityHard); // left
     densityBlock(screenWidth - 10, 0, 10, screenHeight, densityHard); // right
-    densityBlock(screenWidth / 2 - 30, screenHeight - 70, 60, 60, densityHard); // center
+    densityBlock(screenWidth / 2 - 60, screenHeight - 130, 120, 120, densityHard); // center
 }
 
 // Parameter is pointer to the top left corner of the 3x3 density kernel
@@ -171,9 +171,9 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferTy
     posVar = (resultPos + rounding) >> (particleCalculationFBits - particlePosFBits);
 
     int resultVel = velVar * particleFriction;
+    resultVel += (s1 - s2) << 5;
     resultVel += particleVelRounding;
-    resultVel >>= particleVelFBits;
-    resultVel += ( (s1 - s2) + (1 << (gradientShift - 1)) ) >> gradientShift;
+    resultVel >>= (particleCalculationFBits - particleVelFBits);
     velVar = resultVel;
 }
 
