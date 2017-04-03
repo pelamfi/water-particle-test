@@ -41,7 +41,7 @@ static int const particlePosXMask = (1 << (densityBufferWidthExp2 + particlePosF
 static int const densityBufferHeightExp2 = 9;
 static int const densityBufferHeight = 1 << densityBufferHeightExp2;
 static int const particlePosYMask = (1 << (densityBufferHeightExp2 + particlePosFBits)) - 1;
-static int const particleCount = 1;
+static int const particleCount = 10000;
 static int const particleBufferSize = particleCount * sizeof(particle);
 static int const densityBufferYMargins = 8; // kernel is 3 so this should be plenty
 static int const densityBufferSize = densityBufferWidth * (densityBufferHeight + densityBufferYMargins) * sizeof(DensityBufferType);
@@ -175,7 +175,17 @@ static void renderFrameOld() {
 
 static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2) {
     int vel = velVar << particleVelCalculationLeftShift;
-    vel += (s1 - s2) << 9;
+    double diff = s2 - s1;
+    double sinus = diff / sqrt(1 + diff * diff) * 256;
+    int sinusInt = sinus;
+    vel -= sinusInt * 50;
+    // diff = s2 - s1
+    // cos(theta) * f 
+    // cos(theta) * h
+    // sin(theta) * h = diff
+    // h = sqrt(1^2 + diff^2)
+    // sin(theta) = diff / sqrt(1^2 + diff^2)
+    // sin(theta) = diff / sqrt(1 + diff^2)
     vel *= particleFriction;
     vel += particleFrictionRounding;
     vel >>= particleFrictionFBits;
@@ -224,6 +234,7 @@ static int computeStepsBehindTarget() {
     int stepsBehind = targetStepCounter - (stepCounter + skippedStepCounter);
     if (stepsBehind > 10) {
         skippedStepCounter += stepsBehind - 1;
+        printf("%d steps skipped\n", skippedStepCounter);
         stepsBehind = 1;
     }
     return stepsBehind;
