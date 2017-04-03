@@ -20,11 +20,18 @@ typedef uint16_t DensityBufferType;
 static int const particleCalculationFBits = 16; // calculations done at this precision
 static int const particlePosFBits = 4; // particle coordinate fractional bits
 static int const particleVelFBits = 8; // particle velocity fractional bits
-static int const particleVelRounding = 1 << (particleVelFBits - 1); // https://sestevenson.wordpress.com/2009/08/19/rounding-in-fixed-point-number-conversions/
+static int const particleFrictionFBits = 8;
+static int const particleFrictionRounding = 1 << (particleFrictionFBits - 1);
+static int const particleVelCalculationLeftShift = particleCalculationFBits - particleVelFBits;
+static int const particleVelCalculationRounding = 1 << (particleVelCalculationLeftShift - 1); // https://sestevenson.wordpress.com/2009/08/19/rounding-in-fixed-point-number-conversions/
+static int const particlePosCalculationLeftShift = particleCalculationFBits - particlePosFBits;
+static int const particlePosCalculationRounding = 1 << (particlePosCalculationLeftShift - 1);
 static int const particlePosRounding = 1 << (particlePosFBits - 1);
-static int const particleGravity = 2; // particleVelFBits fractional bits included
-static int const particleFriction = 249; // particleVelFBits fractional bits included
+static int const particleGravity = 6; // particleVelFBits fractional bits included
+static int const particleFriction = 250; // particleVelFBits fractional bits included
 static int const gradientShift = 4; // shift right, because the density difference is added to a variable with particleCalculationFBits fractional bits
+static int const stepsPerSecond = 60;
+static int const msPerStep = 1000 / stepsPerSecond;
 
 static int const screenWidth = 640;
 static int const screenHeight = 480;
@@ -34,7 +41,7 @@ static int const particlePosXMask = (1 << (densityBufferWidthExp2 + particlePosF
 static int const densityBufferHeightExp2 = 9;
 static int const densityBufferHeight = 1 << densityBufferHeightExp2;
 static int const particlePosYMask = (1 << (densityBufferHeightExp2 + particlePosFBits)) - 1;
-static int const particleCount = 30000;
+static int const particleCount = 1;
 static int const particleBufferSize = particleCount * sizeof(particle);
 static int const densityBufferYMargins = 8; // kernel is 3 so this should be plenty
 static int const densityBufferSize = densityBufferWidth * (densityBufferHeight + densityBufferYMargins) * sizeof(DensityBufferType);
@@ -48,6 +55,9 @@ static SDL_Surface* screen = 0;
 static bool exitRequested = false;
 
 static int bpp = 0;
+
+static int stepCounter = 0;
+static int skippedStepCounter = 0;
 
 static int frameCounter = 0;
 
@@ -113,7 +123,7 @@ static void setupInitialParticles() {
     for(int i = 0; i < particleCount; i++) {
         particleBuffer[i].x = rand() % ((screenWidth - 20) << particlePosFBits) + (10 << particlePosFBits);
         particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits) + ((screenHeight / 4 * 2 + 10) << particlePosFBits);
-        int const velRange = 1 << particleVelFBits + 1;
+        int const velRange = 1 << (particleVelFBits + 1);
         particleBuffer[i].xVel = (rand() % velRange) - (velRange / 2);
         particleBuffer[i].yVel = (rand() % velRange) - (velRange / 2);
         addParticleDensity(densityKernelTopLeftAddr(particleBuffer[i].x, particleBuffer[i].y));
@@ -164,17 +174,19 @@ static void renderFrameOld() {
 }
 
 static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2) {
-    int pos = posVar << (particleCalculationFBits - particlePosFBits);
-    int vel = velVar << (particleCalculationFBits - particleVelFBits);
-    int resultPos = pos + vel;
-    int rounding = 1 << (particleCalculationFBits - particlePosFBits - 1);
-    posVar = (resultPos + rounding) >> (particleCalculationFBits - particlePosFBits);
+    int vel = velVar << particleVelCalculationLeftShift;
+    vel += (s1 - s2) << 9;
+    vel *= particleFriction;
+    vel += particleFrictionRounding;
+    vel >>= particleFrictionFBits;
+    int updatedVel = (vel + particleVelCalculationRounding) >> particleVelCalculationLeftShift;
 
-    int resultVel = velVar * particleFriction;
-    resultVel += (s1 - s2) << 5;
-    resultVel += particleVelRounding;
-    resultVel >>= (particleCalculationFBits - particleVelFBits);
-    velVar = resultVel;
+    int pos = posVar << particlePosCalculationLeftShift;
+    pos += vel;
+    int updatedPos = (pos + particlePosCalculationRounding) >> particlePosCalculationLeftShift;
+
+    velVar = updatedVel;
+    posVar = updatedPos;
 }
 
 static void updateSimulation() {
@@ -207,16 +219,28 @@ static void renderFrame() {
     }
 }
 
+static int computeStepsBehindTarget() {
+    int targetStepCounter = SDL_GetTicks() / msPerStep;
+    int stepsBehind = targetStepCounter - (stepCounter + skippedStepCounter);
+    if (stepsBehind > 10) {
+        skippedStepCounter += stepsBehind - 1;
+        stepsBehind = 1;
+    }
+    return stepsBehind;
+}
+
 static void renderLoop() {
     while (!exitRequested)
     {
+
+        while (computeStepsBehindTarget() > 0) {
+            updateSimulation();
+            stepCounter++;
+        }
+
         if (SDL_MUSTLOCK(screen)) SDL_LockSurface(screen);
-
-        updateSimulation();
         renderFrame();
-        
         if (SDL_MUSTLOCK(screen)) SDL_UnlockSurface(screen);
-
         // this works just like SDL_Flip() in SDL 1.2
         SDL_UpdateWindowSurface(window);
         frameCounter++;
