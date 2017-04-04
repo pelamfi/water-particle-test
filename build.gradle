@@ -41,6 +41,9 @@ model {
             if (toolChain in Clang && buildType == buildTypes.debug) {
                 cppCompiler.args "-g"
             }
+            if (toolChain in Clang && buildType == buildTypes.release) {
+                cppCompiler.args "-O4"
+            }
         }
     }
 }
