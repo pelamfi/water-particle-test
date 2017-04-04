@@ -97,12 +97,14 @@ static void drawInitialDensityMap() {
 
 static void moveBlock() {
     int range = screenWidth - borderThickness * 2 - blockWidth;
-    int anim = abs(stepCounter % (range * 2) - range);
+    int anim = range - abs(stepCounter % (range * 2) - range);
     if (anim > 0) {
         int pos = abs(anim);
         int dir = anim >= 0 ? 1 : -1;
-        densityBlock(borderThickness + pos, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir);
-        densityBlock(borderThickness + pos + blockWidth, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir * -1);
+        // remove slice from left / dir < 0: add slice to left
+        densityBlock(borderThickness + pos, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir * -1);
+        // add slice to right / dir < 0: rmove slice from right
+        densityBlock(borderThickness + pos + blockWidth, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir);
     }
 }
 
