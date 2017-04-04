@@ -57,7 +57,7 @@ static int const blockRange = screenWidth - borderThickness * 2 - blockWidth - b
 static int const blockStopMs = 3500;
 static int const blockStopSteps = blockStopMs / msPerStep;
 
-static DensityBufferType const densityHard = 400;
+static DensityBufferType const densityHard = 300;
 
 static DensityBufferType* densityBuffer = 0;
 static particle* particleBuffer = 0;
@@ -97,8 +97,14 @@ static void densityBlock(int x, int y, int w, int h, int value) {
 
 static void drawInitialDensityMap() {
     densityBlock(borderThickness, screenHeight - borderThickness, screenWidth - borderThickness * 2, borderThickness, densityHard); // bottom
+    densityBlock(borderThickness, screenHeight - borderThickness + 2, screenWidth - borderThickness * 2, borderThickness - 2, densityHard); // bottom 2
+    densityBlock(borderThickness, screenHeight - borderThickness + 4, screenWidth - borderThickness * 2, borderThickness - 4, densityHard); // bottom 2
     densityBlock(0, 0, borderThickness, screenHeight, densityHard); // left
+    densityBlock(0, 0, borderThickness - 2, screenHeight, densityHard); // left
+    densityBlock(0, 0, borderThickness - 4, screenHeight, densityHard); // left
     densityBlock(screenWidth - borderThickness, 0, borderThickness, screenHeight, densityHard); // right
+    densityBlock(screenWidth - borderThickness + 2, 0, borderThickness - 2, screenHeight, densityHard); // right
+    densityBlock(screenWidth - borderThickness + 4, 0, borderThickness - 4, screenHeight, densityHard); // right
     densityBlock(blockXBasePos, blockYPos, blockWidth, blockHeight, densityHard); // The moving block initial state
 }
 
