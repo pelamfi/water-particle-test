@@ -84,12 +84,26 @@ static void densityBlock(int x, int y, int w, int h, int value) {
     }
 }
 
+static int const borderThickness  = 10;
+static int const blockWidth = 120;
+static int const blockHeight = 120;
+
 static void drawInitialDensityMap() {
-    densityBlock(10, screenHeight - 10, screenWidth - 20, 10, densityHard); // bottom
-    densityBlock(0, 0, 10, screenHeight, densityHard); // left
-    densityBlock(screenWidth - 10, 0, 10, screenHeight, densityHard); // right
-    densityBlock(screenWidth / 2 - 60, screenHeight - 130, 120, 120, densityHard); // center
-    densityBlock(screenWidth / 2 - 60 + 10, screenHeight - 130 + 10, 100, 100, -densityHard); // center
+    densityBlock(borderThickness, screenHeight - borderThickness, screenWidth - borderThickness * 2, borderThickness, densityHard); // bottom
+    densityBlock(0, 0, borderThickness, screenHeight, densityHard); // left
+    densityBlock(screenWidth - borderThickness, 0, borderThickness, screenHeight, densityHard); // right
+    densityBlock(borderThickness, screenHeight - blockHeight - borderThickness, blockWidth, blockHeight, densityHard); // center
+}
+
+static void moveBlock() {
+    int range = screenWidth - borderThickness * 2 - blockWidth;
+    int anim = (stepCounter + range) % (range * 2) - range;
+    if (anim > 0) {
+        int pos = abs(anim);
+        int dir = anim >= 0 ? 1 : -1;
+        densityBlock(borderThickness + pos, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir);
+        densityBlock(borderThickness + pos + blockWidth, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir * -1);
+    }
 }
 
 // Parameter is pointer to the top left corner of the 3x3 density kernel
@@ -194,6 +208,8 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferTy
 }
 
 static void updateSimulation() {
+    moveBlock();
+
     for (int particleIndex = 0; particleIndex < particleCount; particleIndex++) {
         particle* p = &particleBuffer[particleIndex];
 
