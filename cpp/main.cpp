@@ -41,10 +41,23 @@ static int const particlePosXMask = (1 << (densityBufferWidthExp2 + particlePosF
 static int const densityBufferHeightExp2 = 9;
 static int const densityBufferHeight = 1 << densityBufferHeightExp2;
 static int const particlePosYMask = (1 << (densityBufferHeightExp2 + particlePosFBits)) - 1;
-static int const particleCount = 10000;
+static int const particleCount = 15000;
 static int const particleBufferSize = particleCount * sizeof(particle);
 static int const densityBufferYMargins = 8; // kernel is 3 so this should be plenty
 static int const densityBufferSize = densityBufferWidth * (densityBufferHeight + densityBufferYMargins) * sizeof(DensityBufferType);
+
+static int const borderThickness  = 15;
+static int const blockWidth = 300;
+static int const blockHeight = 90;
+static int const blockXMargin = 15;
+static int const blockYMargin = 10;
+static int const blockYPos = screenHeight - blockHeight - borderThickness - blockYMargin;
+static int const blockXBasePos = borderThickness + blockXMargin;
+static int const blockRange = screenWidth - borderThickness * 2 - blockWidth - blockXMargin * 2;
+static int const blockStopMs = 3500;
+static int const blockStopSteps = blockStopMs / msPerStep;
+
+static DensityBufferType const densityHard = 400;
 
 static DensityBufferType* densityBuffer = 0;
 static particle* particleBuffer = 0;
@@ -53,8 +66,6 @@ static SDL_Event event;
 static SDL_Window* window = 0;
 static SDL_Surface* screen = 0;
 static bool exitRequested = false;
-
-static DensityBufferType const densityHard = 500;
 
 static int bpp = 0;
 
@@ -84,14 +95,6 @@ static void densityBlock(int x, int y, int w, int h, int value) {
     }
 }
 
-static int const borderThickness  = 10;
-static int const blockWidth = 120;
-static int const blockHeight = 120;
-static int const blockMargin = 10;
-static int const blockYPos = screenHeight - blockHeight - borderThickness - blockMargin;
-static int const blockXBasePos = borderThickness + blockMargin;
-static int const blockRange = screenWidth - borderThickness * 2 - blockWidth - blockMargin * 2;
-
 static void drawInitialDensityMap() {
     densityBlock(borderThickness, screenHeight - borderThickness, screenWidth - borderThickness * 2, borderThickness, densityHard); // bottom
     densityBlock(0, 0, borderThickness, screenHeight, densityHard); // left
@@ -105,8 +108,8 @@ static void moveBlock() {
         return;
     }
     
-    int rangeStops = blockRange + 2;
-    int pos = rangeStops - abs(t % (rangeStops * 2) - rangeStops) - 1;
+    int rangeStops = blockRange + blockStopSteps * 2;
+    int pos = rangeStops - abs(t % (rangeStops * 2) - rangeStops) - blockStopSteps;
     if (pos < blockRange && pos >= 0) {
         int dir = t % (rangeStops * 2) > rangeStops ? -1 : 1;
         // remove slice from left / dir < 0: add slice to left
@@ -148,7 +151,7 @@ static DensityBufferType * densityKernelTopLeftAddr(int x, int y) {
 static void setupInitialParticles() {
     for(int i = 0; i < particleCount; i++) {
         particleBuffer[i].x = rand() % ((screenWidth - 20) << particlePosFBits) + (10 << particlePosFBits);
-        particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits) + ((screenHeight / 4 * 2 + 10) << particlePosFBits);
+        particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits);
         int const velRange = 1 << (particleVelFBits + 1);
         particleBuffer[i].xVel = (rand() % velRange) - (velRange / 2);
         particleBuffer[i].yVel = (rand() % velRange) - (velRange / 2);
@@ -160,7 +163,7 @@ static void sdlInit() {
     // http://wiki.libsdl.org/SDL_GetWindowSurface?highlight=%28%5CbCategoryVideo%5Cb%29%7C%28CategoryEnum%29%7C%28CategoryStruct%29
     // http://stackoverflow.com/questions/20579658/pixel-drawing-in-sdl2-0#
     SDL_Init(SDL_INIT_VIDEO);
-    window = SDL_CreateWindow("SDL2 Test", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
+    window = SDL_CreateWindow("Pelam's Particle Test", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
     // instead of creating a renderer, we can draw directly to the screen
     screen = SDL_GetWindowSurface(window);
     bpp = screen->format->BytesPerPixel;
@@ -199,7 +202,7 @@ static void renderFrameOld() {
     }
 }
 
-static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType const *p9, int skip) {
+static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType const *p, int skip) {
     int vel = velVar << particleVelCalculationLeftShift;
 
     // https://en.wikipedia.org/wiki/Sobel_operator
