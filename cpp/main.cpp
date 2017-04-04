@@ -30,7 +30,7 @@ static int const particlePosRounding = 1 << (particlePosFBits - 1);
 static int const particleGravity = 6; // particleVelFBits fractional bits included
 static int const particleFriction = 250; // particleVelFBits fractional bits included
 static int const gradientShift = 6; // shift right, because the density difference is added to a variable with particleCalculationFBits fractional bits
-static int const stepsPerSecond = 60;
+static int const stepsPerSecond = 120;
 static int const msPerStep = 1000 / stepsPerSecond;
 
 static int const screenWidth = 640;
@@ -87,22 +87,33 @@ static void densityBlock(int x, int y, int w, int h, int value) {
 static int const borderThickness  = 10;
 static int const blockWidth = 120;
 static int const blockHeight = 120;
+static int const blockMargin = 10;
+static int const blockYPos = screenHeight - blockHeight - borderThickness - blockMargin;
+static int const blockXBasePos = borderThickness + blockMargin;
+static int const blockRange = screenWidth - borderThickness * 2 - blockWidth - blockMargin * 2;
 
 static void drawInitialDensityMap() {
     densityBlock(borderThickness, screenHeight - borderThickness, screenWidth - borderThickness * 2, borderThickness, densityHard); // bottom
     densityBlock(0, 0, borderThickness, screenHeight, densityHard); // left
     densityBlock(screenWidth - borderThickness, 0, borderThickness, screenHeight, densityHard); // right
-    densityBlock(borderThickness, screenHeight - blockHeight - borderThickness, blockWidth, blockHeight, densityHard); // center
+    densityBlock(blockXBasePos, blockYPos, blockWidth, blockHeight, densityHard); // The moving block initial state
 }
 
 static void moveBlock() {
-    int range = screenWidth - borderThickness * 2 - blockWidth;
-    int pos = range - abs(stepCounter % (range * 2) - range);
-    int dir = stepCounter % (range * 2) > range ? -1 : 1;
-    // remove slice from left / dir < 0: add slice to left
-    densityBlock(borderThickness + pos, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir * -1);
-    // add slice to right / dir < 0: rmove slice from right
-    densityBlock(borderThickness + pos + blockWidth, screenHeight - blockHeight - borderThickness, 1, blockHeight, densityHard * dir);
+    int t = stepCounter / 2;
+    if (stepCounter % 2 == 1) {
+        return;
+    }
+    
+    int rangeStops = blockRange + 2;
+    int pos = rangeStops - abs(t % (rangeStops * 2) - rangeStops) - 1;
+    if (pos < blockRange && pos >= 0) {
+        int dir = t % (rangeStops * 2) > rangeStops ? -1 : 1;
+        // remove slice from left / dir < 0: add slice to left
+        densityBlock(blockXBasePos + pos, blockYPos, 1, blockHeight, densityHard * dir * -1);
+        // add slice to right / dir < 0: rmove slice from right
+        densityBlock(blockXBasePos + pos + blockWidth, blockYPos, 1, blockHeight, densityHard * dir);
+    }
 }
 
 // Parameter is pointer to the top left corner of the 3x3 density kernel
