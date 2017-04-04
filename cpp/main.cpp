@@ -41,9 +41,9 @@ static int const particlePosXMask = (1 << (densityBufferWidthExp2 + particlePosF
 static int const densityBufferHeightExp2 = 9;
 static int const densityBufferHeight = 1 << densityBufferHeightExp2;
 static int const particlePosYMask = (1 << (densityBufferHeightExp2 + particlePosFBits)) - 1;
-static int const particleCount = 15000;
+static int const particleCount = 20000;
 static int const particleBufferSize = particleCount * sizeof(particle);
-static int const densityBufferYMargins = 8; // kernel is 3 so this should be plenty
+static int const densityBufferYMargins = 8; // kernel is 3px, and derivates are calculated across 5px so this should be plenty
 static int const densityBufferSize = densityBufferWidth * (densityBufferHeight + densityBufferYMargins) * sizeof(DensityBufferType);
 
 static int const borderThickness  = 15;
@@ -71,8 +71,8 @@ static int bpp = 0;
 
 static int stepCounter = 0;
 static int skippedStepCounter = 0;
-
 static int frameCounter = 0;
+static int accumulatedStepMs = 0;
 
 static void allocateBuffers() {
     densityBuffer = (DensityBufferType*)malloc(densityBufferSize);
@@ -288,9 +288,19 @@ static void renderLoop() {
     {
 
         while (computeStepsBehindTarget() > 0) {
+            int start = SDL_GetTicks();
             updateSimulation();
+            int end = SDL_GetTicks();
+            accumulatedStepMs += end - start;
             stepCounter++;
+
+            int logIntervalSteps = 5000 / msPerStep;
+            if (stepCounter % logIntervalSteps == logIntervalSteps - 1) {
+                printf("%d%% simulation cpu load (1 cpu)\n",  100 * accumulatedStepMs / (logIntervalSteps * msPerStep));
+                accumulatedStepMs = 0;
+            }
         }
+
 
         if (SDL_MUSTLOCK(screen)) SDL_LockSurface(screen);
         renderFrame();
