@@ -54,6 +54,8 @@ static SDL_Window* window = 0;
 static SDL_Surface* screen = 0;
 static bool exitRequested = false;
 
+static DensityBufferType const densityHard = 500;
+
 static int bpp = 0;
 
 static int stepCounter = 0;
@@ -74,20 +76,20 @@ static DensityBufferType* densityAddr(int x, int y) {
     return &densityBuffer[y * densityBufferWidth + x];
 }
 
-static void densityBlock(int x, int y, int w, int h, DensityBufferType const& v) {
+static void densityBlock(int x, int y, int w, int h, int value) {
     for(int yp = y; yp < y + h; yp++) {
         for(int xp = x; xp < x + w; xp++) {
-            *densityAddr(xp, yp) = v;
+            *densityAddr(xp, yp) += value;
         }
     }
 }
 
 static void drawInitialDensityMap() {
-    DensityBufferType const densityHard = 500;
-    densityBlock(0, screenHeight - 10, screenWidth, 10, densityHard); // bottom
+    densityBlock(10, screenHeight - 10, screenWidth - 20, 10, densityHard); // bottom
     densityBlock(0, 0, 10, screenHeight, densityHard); // left
     densityBlock(screenWidth - 10, 0, 10, screenHeight, densityHard); // right
     densityBlock(screenWidth / 2 - 60, screenHeight - 130, 120, 120, densityHard); // center
+    densityBlock(screenWidth / 2 - 60 + 10, screenHeight - 130 + 10, 100, 100, -densityHard); // center
 }
 
 // Parameter is pointer to the top left corner of the 3x3 density kernel
