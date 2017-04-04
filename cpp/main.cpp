@@ -29,7 +29,7 @@ static int const particlePosCalculationRounding = 1 << (particlePosCalculationLe
 static int const particlePosRounding = 1 << (particlePosFBits - 1);
 static int const particleGravity = 6; // particleVelFBits fractional bits included
 static int const particleFriction = 250; // particleVelFBits fractional bits included
-static int const gradientShift = 4; // shift right, because the density difference is added to a variable with particleCalculationFBits fractional bits
+static int const gradientShift = 6; // shift right, because the density difference is added to a variable with particleCalculationFBits fractional bits
 static int const stepsPerSecond = 60;
 static int const msPerStep = 1000 / stepsPerSecond;
 
@@ -173,17 +173,11 @@ static void renderFrameOld() {
     }
 }
 
-static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2, DensityBufferType s3) {
+static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2) {
     int vel = velVar << particleVelCalculationLeftShift;
-    double derivative = s1 + (-2 * s2) + s3; // 1d laplacian discrete https://www.wikiwand.com/en/Discrete_Laplace_operator
-    double sinus = derivative / sqrt(1 + derivative * derivative) * 256;
-    int sinusInt = sinus;
-    vel -= sinusInt * 50;
-    // cos(theta) * hyoptenuse
-    // sin(theta) * hypotenuse = derivative
-    // hypotenuse = sqrt(1^2 + diff^2)
-    // sin(theta) = diff / sqrt(1^2 + diff^2)
-    // sin(theta) = diff / sqrt(1 + diff^2)
+    // https://en.wikipedia.org/wiki/Sobel_operator
+    int derivative = s1 - s2;
+    vel += derivative << gradientShift;
     vel *= particleFriction;
     vel += particleFrictionRounding;
     vel >>= particleFrictionFBits;
@@ -205,8 +199,8 @@ static void updateSimulation() {
         subParticleDensity(dp);
 
         p->yVel += particleGravity;
-        updateParticleDim(p->x, p->xVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 1), *(dp + densityBufferWidth + 2));
-        updateParticleDim(p->y, p->yVel, *(dp + 1), *(dp + 1 + densityBufferWidth), *(dp + 1 + densityBufferWidth * 2));
+        updateParticleDim(p->x, p->xVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 2));
+        updateParticleDim(p->y, p->yVel, *(dp + 1), *(dp + 1 + densityBufferWidth * 2));
         p->x &= particlePosXMask;
         p->y &= particlePosYMask;
         addParticleDensity(densityKernelTopLeftAddr(p->x, p->y));
