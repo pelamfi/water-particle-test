@@ -43,7 +43,7 @@ static int const densityBufferHeight = 1 << densityBufferHeightExp2;
 static int const particlePosYMask = (1 << (densityBufferHeightExp2 + particlePosFBits)) - 1;
 static int const particleCount = 20000;
 static int const particleBufferSize = particleCount * sizeof(particle);
-static int const densityBufferYMargins = 8; // kernel is 3px, and derivates are calculated across 5px so this should be plenty
+static int const densityBufferYMargins = 20; // kernel is 3px, and derivates are calculated across 5px so this should be plenty
 static int const densityBufferSize = densityBufferWidth * (densityBufferHeight + densityBufferYMargins) * sizeof(DensityBufferType);
 
 static int const borderThickness  = 15;
@@ -77,14 +77,18 @@ static int accumulatedStepMs = 0;
 static void allocateBuffers() {
     densityBuffer = (DensityBufferType*)malloc(densityBufferSize);
     memset(densityBuffer, 0, densityBufferSize);
-    densityBuffer += densityBufferYMargins / 2; // margin to reduce need for explicit bounds checking
+
+    // This allows writing particle kernels outside of the buffer without needing bounds checking.
+    // Unsigned integers and the particlePosYMask ensure that the particle coords are kept in check.
+    densityBuffer += densityBufferWidth * densityBufferYMargins / 2; // margin to reduce need for explicit bounds checking
 
     particleBuffer = (particle*)malloc(particleBufferSize);
     memset(particleBuffer, 0, particleBufferSize);
 }
 
 static DensityBufferType* densityAddr(int x, int y) {
-    return &densityBuffer[y * densityBufferWidth + x];
+    int i = y * densityBufferWidth + x;
+    return densityBuffer + i;
 }
 
 static void densityBlock(int x, int y, int w, int h, int value) {
@@ -157,7 +161,7 @@ static DensityBufferType * densityKernelTopLeftAddr(int x, int y) {
 static void setupInitialParticles() {
     for(int i = 0; i < particleCount; i++) {
         particleBuffer[i].x = rand() % ((screenWidth - 20) << particlePosFBits) + (10 << particlePosFBits);
-        particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits);
+        particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits) + (10 << particlePosFBits);
         int const velRange = 1 << (particleVelFBits + 1);
         particleBuffer[i].xVel = (rand() % velRange) - (velRange / 2);
         particleBuffer[i].yVel = (rand() % velRange) - (velRange / 2);
@@ -169,7 +173,7 @@ static void sdlInit() {
     // http://wiki.libsdl.org/SDL_GetWindowSurface?highlight=%28%5CbCategoryVideo%5Cb%29%7C%28CategoryEnum%29%7C%28CategoryStruct%29
     // http://stackoverflow.com/questions/20579658/pixel-drawing-in-sdl2-0#
     SDL_Init(SDL_INIT_VIDEO);
-    window = SDL_CreateWindow("Pelam's Particle Test", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
+    window = SDL_CreateWindow("Peter Lamberg's (water) Particle Test", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
     // instead of creating a renderer, we can draw directly to the screen
     screen = SDL_GetWindowSurface(window);
     bpp = screen->format->BytesPerPixel;
@@ -305,8 +309,8 @@ static void renderLoop() {
         if (SDL_MUSTLOCK(screen)) SDL_LockSurface(screen);
         renderFrame();
         if (SDL_MUSTLOCK(screen)) SDL_UnlockSurface(screen);
-        // this works just like SDL_Flip() in SDL 1.2
-        SDL_UpdateWindowSurface(window);
+
+        SDL_UpdateWindowSurface(window); // basically a flip
         frameCounter++;
 
         sdlHandleEvents();
