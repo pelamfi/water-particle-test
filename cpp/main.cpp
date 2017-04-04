@@ -173,17 +173,15 @@ static void renderFrameOld() {
     }
 }
 
-static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2) {
+static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2, DensityBufferType s3) {
     int vel = velVar << particleVelCalculationLeftShift;
-    double diff = s2 - s1;
-    double sinus = diff / sqrt(1 + diff * diff) * 256;
+    double derivative = s1 + (-2 * s2) + s3; // 1d laplacian discrete https://www.wikiwand.com/en/Discrete_Laplace_operator
+    double sinus = derivative / sqrt(1 + derivative * derivative) * 256;
     int sinusInt = sinus;
     vel -= sinusInt * 50;
-    // diff = s2 - s1
-    // cos(theta) * f 
-    // cos(theta) * h
-    // sin(theta) * h = diff
-    // h = sqrt(1^2 + diff^2)
+    // cos(theta) * hyoptenuse
+    // sin(theta) * hypotenuse = derivative
+    // hypotenuse = sqrt(1^2 + diff^2)
     // sin(theta) = diff / sqrt(1^2 + diff^2)
     // sin(theta) = diff / sqrt(1 + diff^2)
     vel *= particleFriction;
@@ -207,8 +205,8 @@ static void updateSimulation() {
         subParticleDensity(dp);
 
         p->yVel += particleGravity;
-        updateParticleDim(p->x, p->xVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 2));
-        updateParticleDim(p->y, p->yVel, *(dp + 1), *(dp + 1 + densityBufferWidth * 2));
+        updateParticleDim(p->x, p->xVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 1), *(dp + densityBufferWidth + 2));
+        updateParticleDim(p->y, p->yVel, *(dp + 1), *(dp + 1 + densityBufferWidth), *(dp + 1 + densityBufferWidth * 2));
         p->x &= particlePosXMask;
         p->y &= particlePosYMask;
         addParticleDensity(densityKernelTopLeftAddr(p->x, p->y));
