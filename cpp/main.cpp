@@ -97,7 +97,7 @@ static void drawInitialDensityMap() {
 
 static void moveBlock() {
     int range = screenWidth - borderThickness * 2 - blockWidth;
-    int anim = (stepCounter + range) % (range * 2) - range;
+    int anim = abs(stepCounter % (range * 2) - range);
     if (anim > 0) {
         int pos = abs(anim);
         int dir = anim >= 0 ? 1 : -1;
