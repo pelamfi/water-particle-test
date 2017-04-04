@@ -199,10 +199,20 @@ static void renderFrameOld() {
     }
 }
 
-static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType s1, DensityBufferType s2) {
+static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType const *p9, int skip) {
     int vel = velVar << particleVelCalculationLeftShift;
+
     // https://en.wikipedia.org/wiki/Sobel_operator
-    int derivative = s1 - s2;
+    // However I'm cheating by using only a slice of a kernel.
+    
+    int derivative = 2 * *p;
+    p += skip;
+    derivative += 1 * *p;
+    p += skip * 2;
+    derivative += -1 * *p;
+    p += skip;
+    derivative += -2 * *p;
+
     vel += derivative << gradientShift;
     vel *= particleFriction;
     vel += particleFrictionRounding;
@@ -221,17 +231,21 @@ static void updateSimulation() {
     moveBlock();
 
     for (int particleIndex = 0; particleIndex < particleCount; particleIndex++) {
-        particle* p = &particleBuffer[particleIndex];
+        particle& p = particleBuffer[particleIndex];
 
-        DensityBufferType *dp = densityKernelTopLeftAddr(p->x, p->y);
-        subParticleDensity(dp);
+        DensityBufferType *derivCorner = densityAddr(((p.x + particlePosRounding) >> particlePosFBits) - 2, ((p.y  + particlePosRounding) >> particlePosFBits) - 2);
+        DensityBufferType *derivTop = derivCorner + 2;
+        DensityBufferType *derivLeft = derivCorner + densityBufferWidth * 2;
+        DensityBufferType *fieldCorner = derivCorner + 1 + densityBufferWidth;
+    
+        subParticleDensity(fieldCorner);
 
-        p->yVel += particleGravity;
-        updateParticleDim(p->x, p->xVel, *(dp + densityBufferWidth), *(dp + densityBufferWidth + 2));
-        updateParticleDim(p->y, p->yVel, *(dp + 1), *(dp + 1 + densityBufferWidth * 2));
-        p->x &= particlePosXMask;
-        p->y &= particlePosYMask;
-        addParticleDensity(densityKernelTopLeftAddr(p->x, p->y));
+        p.yVel += particleGravity;
+        updateParticleDim(p.x, p.xVel, derivLeft, 1);
+        updateParticleDim(p.y, p.yVel, derivTop, densityBufferWidth);
+        p.x &= particlePosXMask;
+        p.y &= particlePosYMask;
+        addParticleDensity(densityKernelTopLeftAddr(p.x, p.y));
     }
 }
 
