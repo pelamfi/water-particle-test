@@ -112,8 +112,7 @@ static void allocateBuffers()
 
 static DensityBufferType* densityAddr(int x, int y)
 {
-    int i = y * densityBufferWidth + x;
-    return densityBuffer + i;
+    return densityBuffer + y * densityBufferWidth + x;
 }
 
 static void densityBlock(int x, int y, int w, int h, int value)
@@ -158,7 +157,7 @@ static void moveBlock()
         int dir = t % (rangeStops * 2) > rangeStops ? -1 : 1;
         // remove slice from left / dir < 0: add slice to left
         densityBlock(blockXBasePos + pos, blockYPos, 1, blockHeight, densityHard * dir * -1);
-        // add slice to right / dir < 0: rmove slice from right
+        // add slice to right / dir < 0: remove slice from right
         densityBlock(blockXBasePos + pos + blockWidth, blockYPos, 1, blockHeight, densityHard * dir);
     }
 }
@@ -207,17 +206,15 @@ static void subParticleDensity(DensityBufferType* p)
 
 static DensityBufferType* densityKernelTopLeftAddr(int x, int y)
 {
-    DensityBufferType* p =
-        densityAddr(((x + particlePosRounding) >> particlePosFBits) - 1, ((y + particlePosRounding) >> particlePosFBits) - 1);
-    return p;
+    return densityAddr(((x + particlePosRounding) >> particlePosFBits) - 1, ((y + particlePosRounding) >> particlePosFBits) - 1);
 }
 
 static void setupInitialParticles()
 {
     for (int i = 0; i < particleCount; i++)
     {
-        particleBuffer[i].x = rand() % ((screenWidth - 20) << particlePosFBits) + (10 << particlePosFBits);
-        particleBuffer[i].y = rand() % ((screenHeight / 4 - 20) << particlePosFBits) + (10 << particlePosFBits);
+        particleBuffer[i].x = rand() % ((screenWidth - borderThickness * 2) << particlePosFBits) + (borderThickness << particlePosFBits);
+        particleBuffer[i].y = rand() % ((screenHeight / 4 - borderThickness * 2) << particlePosFBits) + (borderThickness << particlePosFBits);
         int const velRange = 1 << (particleVelFBits + 1);
         particleBuffer[i].xVel = (rand() % velRange) - (velRange / 2);
         particleBuffer[i].yVel = (rand() % velRange) - (velRange / 2);
