@@ -40,7 +40,7 @@ Update them into `c_cpp_properties.json` for Visual Studio Code.
   * Build and the project
 
     cd ..
-    gradle build
+    ./gradlew build
     ./build/exe/main/release/main
 
 ## Clang format
