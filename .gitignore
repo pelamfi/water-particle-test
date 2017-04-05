@@ -1,0 +1,13 @@
+*~
+.#*
+\#*#
+build
+.gradle
+.cache
+**/bin
+.idea
+**/.idea
+*.iml
+**/*.iml
+hs_err_pid*.log
+.settings

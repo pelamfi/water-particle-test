@@ -33,10 +33,10 @@ model {
             // Although the FPS seems to be better. I wonder if that is some kind of fluke or whether
 	        // having object file be bitcode allows some optimization or something.
             // '-emit-llvm', 
-            cppCompiler.args '-I', "$projectDir/../../external/sdl/include"
+            cppCompiler.args '-I', "$projectDir/external/sdl/include"
 	    
-	        // cppCompiler.args '-I', "$projectDir/../../external/sdl/include"
-	        linker.args "-L", "$projectDir/../../external/sdl/lib", '-lSDL2'
+	        // cppCompiler.args '-I', "$projectDir/external/sdl/include"
+	        linker.args "-L", "$projectDir/external/sdl/lib", '-lSDL2'
 
             if (toolChain in Clang && buildType == buildTypes.debug) {
                 cppCompiler.args "-g"

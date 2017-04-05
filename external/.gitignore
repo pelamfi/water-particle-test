@@ -1,0 +1,10 @@
+llvm-*/
+logs/
+packages/
+SDL2-*/
+boost_*/
+boost/
+sdl/
+llvm/
+old/
+*.tar.gz
