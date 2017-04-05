@@ -255,22 +255,7 @@ static void sdlHandleEvents()
 
 static uint8_t* pixelAddr(int x, int y, int channel)
 {
-    uint8_t* p = (uint8_t*)screen->pixels + y * screen->pitch + x * bpp + channel;
-    return p;
-}
-
-static void renderFrameOld()
-{
-    for (int x = 0; x < screenWidth; x++)
-    {
-        for (int y = 0; y < screenHeight; y++)
-        {
-            for (int c = 0; c < bpp; c++)
-            {
-                *pixelAddr(x, y, c) = (((frameCounter * c) + x) * (y + (frameCounter * (c ^ 2)))) & 0xff;
-            }
-        }
-    }
+    return (uint8_t*)screen->pixels + y * screen->pitch + x * bpp + channel;
 }
 
 static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferType const* p, int skip)
