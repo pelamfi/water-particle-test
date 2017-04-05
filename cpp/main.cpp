@@ -263,15 +263,16 @@ static void updateParticleDim(uint16_t& posVar, int16_t& velVar, DensityBufferTy
     int vel = velVar << particleVelCalculationLeftShift;
 
     // https://en.wikipedia.org/wiki/Sobel_operator
+    // http://stackoverflow.com/a/10032882/1148030
     // However I'm cheating by using only a slice of a kernel.
 
-    int derivative = 2 * *p;
+    int derivative = 1 * *p;
     p += skip;
-    derivative += 1 * *p;
+    derivative += 2 * *p;
     p += skip * 2;
-    derivative += -1 * *p;
-    p += skip;
     derivative += -2 * *p;
+    p += skip;
+    derivative += -1 * *p;
 
     vel += derivative << gradientShift;
     vel *= particleFriction;
