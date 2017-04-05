@@ -6,8 +6,9 @@ It is not supposed to be physically correct, but merely interesting.
 
 ## Gradle build tool
 
-The reason this project uses Gradle as its build tool instead of a more common CMake,
-is that my main other project uses Gradle and this was originally part of the same Git repository.
+The reason this project uses Gradle as its build tool instead of a more common C build tool CMake or similar,
+is that my other project uses Gradle and this was originally part of the same Git repository.
+
 Feel free to donate a CMake file via a pull request.
 
 ## Platforms
@@ -26,21 +27,24 @@ Get the system header paths on Mac with: `clang -E -v -x c++ /dev/null -fsyntax-
 
 Update them into `c_cpp_properties.json` for Visual Studio Code.
 
-## Building on MAC
+## Building on a MAC
 
-  * Download SDL (Simple Direct Media layer) to `external` directory
-  
+Download SDL (Simple Direct Media layer) to `external` directory
+
     cd external
     curl -o SDL2-2.0.5.tar.gz https://www.libsdl.org/release/SDL2-2.0.5.tar.gz
 
-  * Build lib SDL
+Build lib SDL
 
     bash build_sdl.sh
 
-  * Build and the project
+Build and the project
 
     cd ..
     ./gradlew build
+    
+Running
+
     ./build/exe/main/release/main
 
 ## Clang format
