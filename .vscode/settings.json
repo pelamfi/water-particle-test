@@ -1,0 +1,15 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+  "files.exclude": {
+    ".gradle": true,
+    "external/logs": true,
+    "external/*.tar.gz": true,
+    "external/SDL2-*": true,
+    "external/sdl/logs": true,
+    "external/sdl/bin": true,
+    "external/sdl/lib": true,
+    "external/sdl/share": true,
+    "build": true,
+    "gradle": true
+  },
+}
