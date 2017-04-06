@@ -22,8 +22,8 @@
 
 #include "SDL2/SDL.h"
 #include "stdint.h"
-#include "stdlib.h"
-
+#include "stdio.h"
+#include "string.h"
 #pragma clang diagnostic pop
 
 struct particle
