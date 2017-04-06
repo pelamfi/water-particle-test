@@ -29,7 +29,7 @@ model {
 
     binaries {
         all {
-    	    // -emit-llvm apparently makes .o files be bitcode files, otherwise everything seems to work the same.
+    	    // clang: -emit-llvm apparently makes .o files be bitcode files, otherwise everything seems to work the same.
             // Although the cpu load seems to be a bit better. I wonder if that is some kind of fluke or whether
 	        // having object file be bitcode allows some optimization or something.
 
