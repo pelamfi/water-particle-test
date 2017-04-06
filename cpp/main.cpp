@@ -336,7 +336,7 @@ static int computeStepsBehindTarget()
     if (stepsBehind > 10)
     {
         skippedStepCounter += stepsBehind - 1;
-        printf("%d steps skipped\n", skippedStepCounter);
+        SDL_Log("%d steps skipped\n", skippedStepCounter);
         stepsBehind = 1;
     }
     return stepsBehind;
@@ -358,7 +358,7 @@ static void renderLoop()
             int logIntervalSteps = 5000 / msPerStep;
             if (stepCounter % logIntervalSteps == logIntervalSteps - 1)
             {
-                printf("%d%% simulation cpu load (1 cpu)\n", 100 * accumulatedStepMs / (logIntervalSteps * msPerStep));
+                SDL_Log("%d%% simulation cpu load (1 cpu)\n", 100 * accumulatedStepMs / (logIntervalSteps * msPerStep));
                 accumulatedStepMs = 0;
             }
         }
@@ -377,6 +377,7 @@ static void renderLoop()
 
 int SDL_main(int argc, char* argv[])
 {
+    SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
     allocateBuffers();
     drawInitialDensityMap();
     setupInitialParticles();
