@@ -8,3 +8,4 @@ sdl/
 llvm/
 old/
 *.tar.gz
+*.zip
