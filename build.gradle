@@ -36,11 +36,19 @@ model {
             cppCompiler.args "-I$projectDir/external/sdl/include" // , "-emit-llvm"
 	    
 	        // cppCompiler.args '-I', "$projectDir/external/sdl/include"
-	        linker.args "-L$projectDir/external/sdl/lib", '-lSDL2'
+
+            print toolChain
+
+            if (toolChain in VisualCpp) {
+                linker.args "/SUBSYSTEM:WINDOWS", "$projectDir/external/sdl/lib/SDL2.lib", "$projectDir/external/sdl/lib/SDL2main.lib"
+            } else {
+                linker.args "-L$projectDir/external/sdl/lib", '-lSDL2'
+            }
 
             if (toolChain in Clang && buildType == buildTypes.debug) {
                 cppCompiler.args "-g"
             }
+
             if (toolChain in Clang && buildType == buildTypes.release) {
                 cppCompiler.args "-O4"
             }

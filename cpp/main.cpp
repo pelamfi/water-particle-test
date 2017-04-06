@@ -24,6 +24,7 @@
 #include "stdint.h"
 #include "stdio.h"
 #include "string.h"
+#include "stdlib.h"
 #pragma clang diagnostic pop
 
 struct particle
@@ -374,7 +375,7 @@ static void renderLoop()
     }
 }
 
-int main(int argc, char* argv[])
+int SDL_main(int argc, char* argv[])
 {
     allocateBuffers();
     drawInitialDensityMap();
