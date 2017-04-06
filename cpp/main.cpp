@@ -375,7 +375,11 @@ static void renderLoop()
     }
 }
 
+#if _WIN32 || _WIN64
 int SDL_main(int argc, char* argv[])
+#else
+int main(int argc, char* argv[])
+#endif
 {
     SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
     allocateBuffers();

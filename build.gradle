@@ -42,7 +42,7 @@ model {
             if (toolChain in VisualCpp) {
                 linker.args "/SUBSYSTEM:WINDOWS", "$projectDir/external/sdl/lib/SDL2.lib", "$projectDir/external/sdl/lib/SDL2main.lib"
             } else {
-                linker.args "-L$projectDir/external/sdl/lib", '-lSDL2'
+                linker.args "-L$projectDir/external/sdl/lib",'-lSDL2'
             }
 
             if (toolChain in Clang && buildType == buildTypes.debug) {
